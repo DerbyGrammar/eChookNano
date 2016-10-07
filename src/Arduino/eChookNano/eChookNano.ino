@@ -54,7 +54,7 @@ const int   MOTOR_OUT_PIN       = 5;   // PWM output to the motor
 const int   LED_1_OUT_PIN       = 6;   // PWM Output for LED 1
 const int   LED_2_OUT_PIN       = 9;   // PWM Output for LED 2
 const int   FAN_OUT_PIN         = 11;  // PWM output to the fan(s)
-
+const int   TEMP_FAN_ON         = 30; 
 
 /** ________________________________________________________________________________________ BLUETOOTH CONSTANTS */
 /* BLUETOOTH SETUP PARAMETERS */
