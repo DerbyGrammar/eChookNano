@@ -372,7 +372,7 @@ void loop()
  * This is a custom subroutine made by Chris Nethercott
  * If you have any issues contact him.
  */
-void lcdPrint(int volt, int cur, int temp, int temp2, int mphspeed, bool isFanOn) {
+void lcdPrint(int volt, int cur, int temp, int temp2, int speed, bool isFanOn) {
   bool lcdGoing;
   if(lcdGoing == false) {
    lcdGoing = true;
@@ -388,8 +388,8 @@ void lcdPrint(int volt, int cur, int temp, int temp2, int mphspeed, bool isFanOn
 
    lcd.print("TMP: ");
    lcd.print(temp);
-   lcd.print(" | MPH: ");
-   lcd.print(mphspeed);
+   lcd.print(" | SPD: ");
+   lcd.print(speed);
    lcd.setCursor(0,3);
 
    lcd.print("TMP: ");
@@ -397,8 +397,6 @@ void lcdPrint(int volt, int cur, int temp, int temp2, int mphspeed, bool isFanOn
    lcd.print(" | FAN: ");
    lcd.print(isFanOn ? "ON" : "OFF");
    lcd.setCursor(0,4);
-
-   //do stuff here
 
    lcdGoing = false;
   }
