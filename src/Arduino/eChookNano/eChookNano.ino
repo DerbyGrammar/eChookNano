@@ -383,7 +383,7 @@ void lcdPrint(int volt, int cur, int temp, int temp2, int mphspeed, bool isFanOn
    lcd.print("VLT: ");
    lcd.print(volt);
    lcd.print(" | CUR: ");
-   lcd.print(CUR);
+   lcd.print(cur);
    lcd.setCursor(0,2);
 
    lcd.print("TMP: ");
