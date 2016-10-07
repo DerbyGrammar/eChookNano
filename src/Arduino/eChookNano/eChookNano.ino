@@ -58,7 +58,7 @@ const int   FAN_OUT_PIN         = 11;  // PWM output to the fan(s)
 
 /** ________________________________________________________________________________________ BLUETOOTH CONSTANTS */
 /* BLUETOOTH SETUP PARAMETERS */
-const String  BT_NAME           = "eChookNano";   // Name of the bluetooth module to appear on phone
+const String  BT_NAME           = "DGS Racing";   // Name of the bluetooth module to appear on phone
 const String  BT_PASSWORD       = "1234";         // Pairing Password
 const long     BT_BAUDRATE       = 115200;           // Baud Rate to run at. Must match Arduino's baud rate.
 
