@@ -62,7 +62,7 @@ const int   FAN_OUT_PIN         = 11;  // PWM output to the fan(s)
 /** ___________________________________________________________________________________________________ TEMPERATURE (custom made) */
 const int   TEMP_FAN_ON         = 30;  // TEMP for fan to turn on, this can be adjusted
 const int   TEMP_FAN_PIN        = 4; // TEMP for the output to turn the fan on and off
-const String firstLine          = "DGS Racing"; // Top line on the LCD, must be below 20 chars
+const String LCD_FIRSTLINE_STRING          = "DGS Racing"; // Top line on the LCD, must be below 20 chars
 
 /** ________________________________________________________________________________________ BLUETOOTH CONSTANTS */
 /* BLUETOOTH SETUP PARAMETERS */
@@ -377,7 +377,7 @@ void lcdPrint(int volt, int cur, int temp, int temp2, int mphspeed, bool isFanOn
   if(lcdGoing == false) {
    lcdGoing = true;
 
-   lcd.print(firstLine);
+   lcd.print(LCD_FIRSTLINE_STRING);
    lcd.setCursor(0,1);
 
    lcd.print("VLT: ");
