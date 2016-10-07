@@ -56,7 +56,8 @@ const int   LED_2_OUT_PIN       = 9;   // PWM Output for LED 2
 const int   FAN_OUT_PIN         = 11;  // PWM output to the fan(s)
 
 /** ___________________________________________________________________________________________________ TEMPERATURE (custom made) */
-
+const int   TEMP_FAN_ON         = 30;  // TEMP for fan to turn on, this can be adjusted
+const int   TEMP_FAN_PIN        = 4; // TEMP for the output to turn the fan on and off 
 
 /** ________________________________________________________________________________________ BLUETOOTH CONSTANTS */
 /* BLUETOOTH SETUP PARAMETERS */
