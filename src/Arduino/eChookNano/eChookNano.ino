@@ -152,8 +152,8 @@ float throttle            = 0;
 float current           = 0;
 float motorRPM            = 0;
 float wheelSpeed          = 0;
-float tempOne           = 0;
-float tempTwo           = 0;
+float tempOne           = 0; // motor
+float tempTwo           = 0; // outside?
 float tempThree           = 0;
 int   brake             = 0;
 
