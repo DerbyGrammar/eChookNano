@@ -350,7 +350,53 @@ void loop()
 
   }
 
+  boolean isFanOn;
+  if(tempOne >= TEMP_FAN_ON) {
+    isFanOn = true;
+    digitalWrite(TEMP_FAN_PIN, HIGH);
+  } else {
+    isFanOn = false;
+    digitalWrite(TEMP_FAN_PIN, LOW);
+  }
 
+  lcdPrint(batteryVoltageTotal, current, tempOne, tempTwo, wheelSpeed, isFanOn);
+  
+}
+
+/*
+ * This is a custom subroutine made by Chris Nethercott
+ * If you have any issues contact him.
+ */
+void lcdPrint(int volt, int cur, int temp, int temp2, int mphspeed, bool isFanOn) {
+  bool lcdGoing;
+  if(lcdGoing == false) {
+   lcdGoing = true;
+
+   lcd.print(firstLine);
+   lcd.setCursor(0,1);
+
+   lcd.print("VLT: ");
+   lcd.print(volt);
+   lcd.print(" | CUR: ");
+   lcd.print(CUR);
+   lcd.setCursor(0,2);
+
+   lcd.print("TMP: ");
+   lcd.print(temp);
+   lcd.print(" | MPH: ");
+   lcd.print(mphspeed);
+   lcd.setCursor(0,3);
+
+   lcd.print("TMP: ");
+   lcd.print(temp2);
+   lcd.print(" | FAN: ");
+   lcd.print(isFanOn ? "ON" : "OFF");
+   lcd.setCursor(0,4);
+
+   //do stuff here
+
+   lcdGoing = false;
+  }
 }
 
 /**
