@@ -1,17 +1,8 @@
-/*
- eChookNano
- Derby Grammar
-*/
-
 /** ================================== */
-/** Includes                       */
+/** Includes            		       */
 /** ================================== */
 
 #include <math.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
-
-LiquidCrystal_I2C lcd(0x27, 20, 4);
 
 
 /** ================================== */
@@ -38,9 +29,8 @@ const float REFERENCE_VOLTAGE = 5; //This is the analog reference voltage, i.e. 
 const int   VBATT_IN_PIN        = A0;  // Analog input pin for battery voltage
 const int   AMPS_IN_PIN         = A2;  // Analog input pin for current draw
 const int   THROTTLE_IN_PIN     = A3;  // Analog input pin for the throttle
-const int   TEMP1_IN_PIN        = A4;  // Analog input pin for temp sensor 1
-const int   TEMP2_IN_PIN        = A5;  // Analog input pin for temp sensor 2
-const int   TEMP3_IN_PIN        = A6;  // Analog input pin for temp sensor 3
+const int   TEMP1_IN_PIN        = A5;  // Analog input pin for temp sensor 1
+const int   TEMP2_IN_PIN        = A4;  // Analog input pin for temp sensor 2
 const int   VBATT1_IN_PIN       = A7;  // Analog input pin for the lower battery voltage (battery between ground and 12V)
 
 /** ___________________________________________________________________________________________________ DIGITAL INPUT PINS */
@@ -59,16 +49,12 @@ const int   LED_1_OUT_PIN       = 6;   // PWM Output for LED 1
 const int   LED_2_OUT_PIN       = 9;   // PWM Output for LED 2
 const int   FAN_OUT_PIN         = 11;  // PWM output to the fan(s)
 
-/** ___________________________________________________________________________________________________ TEMPERATURE (custom made) */
-const int   TEMP_FAN_ON         = 30;  // TEMP for fan to turn on, this can be adjusted
-const int   TEMP_FAN_PIN        = 4; // TEMP for the output to turn the fan on and off
-const String LCD_FIRSTLINE_STRING          = "DGS Racing"; // Top line on the LCD, must be below 20 chars
 
 /** ________________________________________________________________________________________ BLUETOOTH CONSTANTS */
 /* BLUETOOTH SETUP PARAMETERS */
-const String  BT_NAME           = "DGS Racing";   // Name of the bluetooth module to appear on phone
+const String  BT_NAME           = "eChookNano";   // Name of the bluetooth module to appear on phone
 const String  BT_PASSWORD       = "1234";         // Pairing Password
-const long     BT_BAUDRATE       = 115200;           // Baud Rate to run at. Must match Arduino's baud rate.
+const long    BT_BAUDRATE       = 115200;         // Baud Rate to run at. Must match Arduino's baud rate.
 
 //Bluetooth module uses hardware serial from Arduino, so Arduino Tx -> HC05 Rx, Ard Rx -> HC Tx. EN and Status are disconnected.
 
@@ -93,15 +79,14 @@ const int               AMPSENSOR_CAL_DELAY              = 3000;    // calibrati
  *  If these are altered the data will no longer be read correctly by the phone.
  */
 
-const char SPEED_ID            = 's';
-const char MOTOR_ID            = 'm';
-const char CURRENT_ID          = 'i';
-const char VOLTAGE_ID          = 'v';
-const char THROTTLE_INPUT_ID   = 't';
-const char THROTTLE_ACTUAL_ID  = 'd';
-const char TEMP1_ID            = 'a';
-const char TEMP2_ID            = 'b';
-const char TEMP3_ID            = 'c';
+const char SPEED_ID            = 's'; // m/s
+const char MOTOR_ID            = 'm'; // RPM
+const char CURRENT_ID          = 'i'; // A
+const char VOLTAGE_ID          = 'v'; // V
+const char THROTTLE_INPUT_ID   = 't'; // % (0-100)
+const char THROTTLE_ACTUAL_ID  = 'd'; // % (0-100)
+const char TEMP1_ID            = 'a'; // degrees Centigrade
+const char TEMP2_ID            = 'b'; // degrees Centigrade
 const char LAUNCH_MODE_ID      = 'L';
 const char CYCLE_VIEW_ID       = 'C';
 const char GEAR_RATIO_ID       = 'r';
@@ -117,18 +102,12 @@ unsigned long   lastWheelSpeedPollTime      = 0;    // poll interval for wheel s
 unsigned long   lastMotorSpeedPollTime      = 0;    // poll interval for wheel speed
 int             currentSensorOffset         = 0;    //offset value for the current sensor
 int             currentAvgLoopCount         = 0;    //Counter for current loop average
-int           loopCounter             = 0;
+int       		loopCounter         		= 0;
 
 
 /** ___________________________________________________________________________________________________ FILTERING VARIABLES */
 int           currentPast            = 0;
 float         currentAlpha           = 0.8;
-
-/** ___________________________________________________________________________________________________ GEAR RATIO VARIABLES */
-unsigned long motorSpeedRPM          = 0;
-unsigned long wheelRPM               = 0;
-
-
 
 
 /** ___________________________________________________________________________________________________ INTERRUPT VERIABLES */
@@ -153,14 +132,16 @@ const unsigned long BUTTON_DEBOUNCE   = 50;
 
 float batteryVoltageTotal   = 0;
 float batteryVoltageLower   = 0;
-float throttle            = 0;
-float current           = 0;
-float motorRPM            = 0;
-float wheelSpeed          = 0;
-float tempOne           = 0; // motor
-float tempTwo           = 0; // outside?
-float tempThree           = 0;
-int   brake             = 0;
+float throttle        		= 0;
+float current       		= 0;
+float motorRPM        		= 0;
+float wheelRPM 				= 0;
+float wheelSpeed      		= 0;
+float gearRatio 			= 0;
+float tempOne       		= 0;
+float tempTwo       		= 0;
+float tempThree       		= 0;
+int   brake         		= 0;
 
 
 /** ___________________________________________________________________________________________________ Smoothing Variables */
@@ -171,24 +152,24 @@ int   brake             = 0;
  * When a new reading is taken it is added to an array. Each new reading takes the place of the oldest reading
  * in the array, so the array always contains the last X number of readings, where X is the size of the array.
  * In our case, for a reading being updated every 250ms, an array of length 4 would average the readings over
- * the last second. 
+ * the last second.
  * To implement this in code, two golbal variables are needed per filter:
- *  > The Array - to store the last X number of readings
- *  > A Count - This dictates which position in the array a new reading goes to and loops between 0 and array length - 1
+ * 	> The Array - to store the last X number of readings
+ *	> A Count - This dictates which position in the array a new reading goes to and loops between 0 and array length - 1
  * To make it simple to alter the length of time to average over it is good practice to define the max count
  * value and aray length as a global const too.
  */
 
- //Current Smoothing Variables:
- 
+//Current Smoothing Variables:
+
 const int currentSmoothingSetting = 4; //current is sampled every 250ms, therefore 4 makes 1s of smoothing
-int currentSmoothingArray[currentSmoothingSetting];
+float currentSmoothingArray[currentSmoothingSetting];
 int currentSmoothingCount = 0;
 
 //Speed Smoothing Variables:
- 
+
 const int speedSmoothingSetting = 3; //speed is sampled every 1s, therefore 3 makes 3 seconds of smoothing
-int speedSmoothingArray[speedSmoothingSetting];
+float speedSmoothingArray[speedSmoothingSetting];
 int speedSmoothingCount = 0;
 
 
@@ -202,25 +183,24 @@ void setup()
 {
 
   //Set up pin modes for all inputs and outputs
-  pinMode(MOTOR_OUT_PIN,          OUTPUT);
-  digitalWrite(MOTOR_OUT_PIN,     LOW);  // Ensure motor is not driven on startup
-  pinMode(FAN_OUT_PIN,            OUTPUT);
-  digitalWrite(FAN_OUT_PIN,       LOW);  // Ensure fan is not driven on startup
-  pinMode(LED_1_OUT_PIN,          OUTPUT);
-  pinMode(LED_2_OUT_PIN,          OUTPUT);
+  pinMode(MOTOR_OUT_PIN,        OUTPUT);
+  digitalWrite(MOTOR_OUT_PIN,   LOW);  // Ensure motor is not driven on startup
+  pinMode(FAN_OUT_PIN,          OUTPUT);
+  digitalWrite(FAN_OUT_PIN,     LOW);  // Ensure fan is not driven on startup
+  pinMode(LED_1_OUT_PIN,        OUTPUT);
+  pinMode(LED_2_OUT_PIN,        OUTPUT);
 
-  pinMode(VBATT_IN_PIN,         INPUT);
-  pinMode(VBATT1_IN_PIN,        INPUT);
-  pinMode(THROTTLE_IN_PIN,      INPUT);
-  pinMode(AMPS_IN_PIN,          INPUT);
-//  pinMode(AMPS_REF_IN_PIN,      INPUT);
-  pinMode(TEMP1_IN_PIN,         INPUT);
-  pinMode(TEMP2_IN_PIN,         INPUT);
-  pinMode(TEMP3_IN_PIN,         INPUT);
+  pinMode(VBATT_IN_PIN,     	INPUT);
+  pinMode(VBATT1_IN_PIN,      	INPUT);
+  pinMode(THROTTLE_IN_PIN,    	INPUT);
+  pinMode(AMPS_IN_PIN,        	INPUT);
+  pinMode(TEMP1_IN_PIN,       	INPUT);
+  pinMode(TEMP2_IN_PIN,       	INPUT);
 
-  pinMode(LAUNCH_BTN_IN_PIN,      INPUT_PULLUP);
-  pinMode(CYCLE_BTN_IN_PIN,       INPUT_PULLUP);
-  pinMode(BRAKE_IN_PIN,           INPUT_PULLUP);  //input type will depend on implementation of brake light
+
+  pinMode(LAUNCH_BTN_IN_PIN,    INPUT_PULLUP);
+  pinMode(CYCLE_BTN_IN_PIN,     INPUT_PULLUP);
+  pinMode(BRAKE_IN_PIN,         INPUT_PULLUP);  //input type will depend on implementation of brake light
 
   /**
    * Set up Interrupts:
@@ -275,7 +255,7 @@ void setup()
    * release button, then reset Arduino)
   */
 
-  if(checkBtAtMode()) // checks if the arduino is in AT mode
+  if (checkBtAtMode()) // checks if the arduino is in AT mode
   {
     configureBluetooth(); // If AT mode is set, configure according to the BT_xxx constants defined above
   }
@@ -296,7 +276,7 @@ void loop()
 
   throttle = readThrottle(); // if this is being used as the input to a motor controller it is recommended to check it at a higher frequency.
 
-  if(millis() - lastShortDataSendTime > SHORT_DATA_TRANSMIT_INTERVAL) //i.e. if 250ms have passed since this code last ran
+  if (millis() - lastShortDataSendTime > SHORT_DATA_TRANSMIT_INTERVAL) //i.e. if 250ms have passed since this code last ran
   {
     lastShortDataSendTime = millis(); //this is reset at the start so that the calculation time does not add to the loop time
     loopCounter = loopCounter + 1; // This value will loop 1-4, the 1s update variables will update on certain loops to spread the processing time.
@@ -316,30 +296,28 @@ void loop()
     //brake = readBrake(); //As of version 1.7 the app does not support this variable yet.
 
 
-    if(loopCounter == 1)
+    if (loopCounter == 1)
     {
       tempOne = readTempOne();
       sendData(TEMP1_ID, tempOne);
-      digitalWrite(13, HIGH);
+      digitalWrite(13, HIGH); //these are just flashing the LEDs as visual confimarion of the loop
       digitalWrite(9, HIGH);
     }
 
-    if(loopCounter == 2)
+    if (loopCounter == 2)
     {
       tempTwo = readTempTwo();
       sendData(TEMP2_ID, tempTwo);
       digitalWrite(6, HIGH);
     }
 
-    if(loopCounter == 3)
-    {
-      tempThree = readTempThree();
-      sendData(TEMP3_ID, tempThree);
+    if (loopCounter == 3)
+    { //nothing actaully needed to do at .75 seconds
       digitalWrite(13, LOW);
       digitalWrite(9, LOW);
     }
 
-    if(loopCounter == 4)
+    if (loopCounter == 4)
     {
       loopCounter = 0; //4 * 0.25 makes one second, so counter resets
 
@@ -348,6 +326,10 @@ void loop()
 
       motorRPM = readMotorRPM();
       sendData(MOTOR_ID, motorRPM);
+
+      gearRatio = calculateGearRatio();
+      sendData(GEAR_RATIO_ID, gearRatio);
+
       digitalWrite(6, LOW);
     }
 
@@ -355,51 +337,7 @@ void loop()
 
   }
 
-  boolean isFanOn;
-  if(tempOne >= TEMP_FAN_ON) {
-    isFanOn = true;
-    digitalWrite(TEMP_FAN_PIN, HIGH);
-  } else {
-    isFanOn = false;
-    digitalWrite(TEMP_FAN_PIN, LOW);
-  }
 
-  lcdPrint(batteryVoltageTotal, current, tempOne, tempTwo, wheelSpeed, isFanOn);
-  
-}
-
-/*
- * This is a custom subroutine made by Chris Nethercott
- * If you have any issues contact him.
- */
-void lcdPrint(int volt, int cur, int temp, int temp2, int speed, bool isFanOn) {
-  bool lcdGoing;
-  if(lcdGoing == false) {
-   lcdGoing = true;
-
-   lcd.print(LCD_FIRSTLINE_STRING);
-   lcd.setCursor(0,1);
-
-   lcd.print("VLT: ");
-   lcd.print(volt);
-   lcd.print(" | CUR: ");
-   lcd.print(cur);
-   lcd.setCursor(0,2);
-
-   lcd.print("TMP: ");
-   lcd.print(temp);
-   lcd.print(" | SPD: ");
-   lcd.print(speed);
-   lcd.setCursor(0,3);
-
-   lcd.print("TMP: ");
-   lcd.print(temp2);
-   lcd.print(" | FAN: ");
-   lcd.print(isFanOn ? "ON" : "OFF");
-   lcd.setCursor(0,4);
-
-   lcdGoing = false;
-  }
 }
 
 /**
@@ -417,7 +355,7 @@ float readVoltageTotal()
 
   tempVoltage = tempVoltage * 6.15; //Gives battery voltage where 6 is the division ratio of the potential divider. NEEDS TUNING!!
 
-  return(tempVoltage);
+  return (tempVoltage);
 }
 
 float readVoltageLower()
@@ -426,9 +364,9 @@ float readVoltageLower()
 
   tempVoltage = (tempVoltage / 1024) * REFERENCE_VOLTAGE; //This gives the actual voltage seen at the arduino pin, assuming reference voltage of 5v
 
-  tempVoltage = tempVoltage * 3; //Gives battery voltage where 3 is the division ratio of the potential divider. NEEDS TUNING!!
+  tempVoltage = tempVoltage * 3.071f; //Gives battery voltage where 3 is the division ratio of the potential divider. NEEDS TUNING!!
 
-  return(tempVoltage);
+  return (tempVoltage);
 }
 
 float readCurrent()
@@ -456,23 +394,25 @@ float readCurrent()
 
   for (int i = 0; i < currentSmoothingSetting; i++)
   {
-    tempCurrent += currentSmoothingArray[i]; //sum all values in the current smoothing array 
+    tempCurrent += currentSmoothingArray[i]; //sum all values in the current smoothing array
   }
 
   tempCurrent = tempCurrent / currentSmoothingSetting; //divide summed value by number of samples to get mean
 
-  return(tempCurrent); //return the final smoothed value
+  return (tempCurrent); //return the final smoothed value
 }
 
-float readThrottle()
+//If a push button throttle is used, comment out the upper readThrottle function, and unComment the lower one.
+
+int readThrottle() //This function is for a variable Throttle input
 {
   float tempThrottle = analogRead(THROTTLE_IN_PIN);
 
 
 
-  tempThrottle = (tempThrottle / 1024) * REFERENCE_VOLTAGE; // Gives the actual voltage seen on the arduino Pin, assuming reference voltage of 5V
+  tempThrottle = (tempThrottle / 1023) * REFERENCE_VOLTAGE; // Gives the actual voltage seen on the arduino Pin, assuming reference voltage of 5V
 
-  if(tempThrottle < 1) //less than 1V
+  if (tempThrottle < 1) //less than 1V
   {
     tempThrottle = 0;
   }
@@ -484,13 +424,27 @@ float readThrottle()
   tempThrottle = (tempThrottle / REFERENCE_VOLTAGE) * 100; // Gives throttle as a percentage
 
 
-  analogWrite(MOTOR_OUT_PIN, map((int)tempThrottle, 0, 100, 0, 255));
+  analogWrite(MOTOR_OUT_PIN, map((int)tempThrottle, 0, 100, 0, 255)); //This drives the motor output. Unless you are using the board to drive your motor, comment it out.
 
-
-
-
-  return((int)tempThrottle); // the (int) converts the value into an integer value before the return function uses it
+  return ((int)tempThrottle); // the (int) converts the value into an integer value before the return function uses it
 }
+
+/*
+int readThrottle() //This function is for a push button, on/off Throttle input
+{
+  float tempThrottle = analogRead(THROTTLE_IN_PIN);
+
+  if(tempThrottle > 200)
+  {
+  	tempThrottle = 100; //full throttle
+  }else
+  {
+  	tempThrottle = 0; //No throttle
+  }
+
+  return ((int)tempThrottle); // the (int) converts the value into an integer value before the return function uses it
+}
+*/
 
 
 
@@ -514,22 +468,16 @@ float readTempOne()
 {
   float temp = thermistorADCToCelcius(analogRead(TEMP1_IN_PIN)); //use the thermistor function to turn the ADC reading into a temperature
 
-  return(temp); //return Temperature.
+  return (temp); //return Temperature.
 }
 
 float readTempTwo()
 {
   float temp = thermistorADCToCelcius(analogRead(TEMP2_IN_PIN));
 
-  return(temp);
+  return (temp);
 }
 
-float readTempThree()
-{
-  float temp = thermistorADCToCelcius(analogRead(TEMP3_IN_PIN));
-
-  return(temp);
-}
 
 int readBrake()
 {
@@ -539,10 +487,10 @@ int readBrake()
 
   temp = !temp;
 
-  return(temp);
+  return (temp);
 }
 
-float readWheelSpeed()
+float readWheelSpeed() //wheelRPM is also updated whenever this is called
 {
   // First action is to take readings and reset the wheel count so that there are no change to the variables during the calculations or between reading and resetting:
 
@@ -554,6 +502,13 @@ float readWheelSpeed()
   long tempWheelPollTime = millis();
   lastWheelSpeedPollTime = tempWheelPollTime;
 
+  //Wheel RMP has been tacked into this function at a later date, so could do with re-writing really...
+
+  //Wheel RMP Calculations:
+  wheelRPM = (float) tempWheelPoll / (float) WHEEL_MAGNETS; //gives number of rotations
+
+  wheelRPM = wheelRPM / ((tempWheelPollTime - tempLastWheelPollTime) / 60000); // /60,000 converts millis to minutes
+
   // All integers in the folowing equation are cast to float so that the value is not converted to an integer at any point reducing accuracy through rounding.
 
   // Next task is to calculate the distance travelled. This is dome by takin the wheel poll, which is the number of magnets that have passed the sensor since the last check
@@ -563,32 +518,31 @@ float readWheelSpeed()
   // Now determine how much time in seconds it took to travel this distance, and divide the distanve by time to get speed in meters per second.
 
   float wheelSpeedMetersPerSecond = wheelDistanceTravelled / ((tempWheelPollTime - tempLastWheelPollTime) / 1000); // the /1000 converts the milliseconds to seconds
+   
 
-  // Finally convert meter per second into Miles per Hour by multiplying by 2.2369:
+  //Next section of code handles the smooting:
 
-  float wheelSpeedMPH = wheelSpeedMetersPerSecond * 2.2369f; // 1m/s = 2.2369MPH
-
-  //Next section of code handles the smooting: 
-
-  speedSmoothingArray[speedSmoothingCount] = wheelSpeedMPH; //adds current speed into oldest position in array
+  speedSmoothingArray[speedSmoothingCount] = wheelSpeedMetersPerSecond; //adds current speed into oldest position in array
 
   speedSmoothingCount ++ ; //incrememnts array position for next reading
 
-  if(speedSmoothingCount >= speedSmoothingSetting)
+  if (speedSmoothingCount >= speedSmoothingSetting)
   {
     speedSmoothingCount = 0; //reset if count exceeds array length
   }
 
-  wheelSpeedMPH = 0; //reset variable ready to sum array
+  wheelSpeedMetersPerSecond = 0; //reset variable ready to sum array
 
   for (int i = 0; i < speedSmoothingSetting; i++)
   {
-    wheelSpeedMPH = speedSmoothingArray[i];
+    wheelSpeedMetersPerSecond += speedSmoothingArray[i];
   }
 
-  wheelSpeedMPH = wheelSpeedMPH / speedSmoothingSetting; //divide summed figure by array count to get mean value
+  wheelSpeedMetersPerSecond = wheelSpeedMetersPerSecond / speedSmoothingSetting; //divide summed figure by array count to get mean value
 
-  return(wheelSpeedMPH); //return smoothed value
+  return (wheelSpeedMetersPerSecond); //return smoothed value
+
+  //NOTE: Meters per Second is transferred to the Android app to keep SI units. The app converts it to mph or kmph according to it's settings.
 }
 
 float readMotorRPM()
@@ -607,12 +561,32 @@ float readMotorRPM()
 
   float motorRevolutions = tempMotorPoll / MOTOR_MAGNETS;
 
-  // Now use the time time passed to convert this to revolutions per minute
-  // RMP = (revolutions / latestPollTIme - lastPollTime) / 1000 to convert to Seconds) * 60 to convert to minutes
+  // As we want revolutions per minute out of this, multiplying the number of revolutions by 60 at this point acheives that.
 
-  float motorShaftRPM = (motorRevolutions / ((tempMotorPollTime - tempLastMotorPollTime) / 1000 )) * 60;
+  float motorRevolutionsPerMin = motorRevolutions * 60.0;
 
-  return(motorShaftRPM);
+  // And the time in milliseconds over which these revolutions have occurred
+
+  float timeDiffms = tempMotorPollTime - tempLastMotorPollTime;
+
+  // As we have multiplied by 60 for minutes above, our time needs to be in seconds:
+
+  float timeDiffs = timeDiffms / 1000.0;
+
+  // Now use the time time passed and number of revolutions to convert this to revolutions per minute.
+  // As the revolutions have been multiplied by 60, there is no need for any aditional scaling
+  
+
+  float motorShaftRPM = motorRevolutionsPerMin / timeDiffs;
+
+  return (motorShaftRPM);
+}
+
+float calculateGearRatio()
+{
+	float tempGearRatio = motorRPM/wheelRPM;
+
+	return(tempGearRatio);
 }
 
 
@@ -641,10 +615,10 @@ float thermistorADCToCelcius(int rawADC)
   // Constants for this calculation:
 
   // Steinhart-Hart Coefficients, see comment above
-  // TODO: These need updating once a thermistor is decided on - TODO
-  const float A = 0.001129148;
-  const float B = 0.000234125;
-  const float C = 0.0000000876741; //NOTE: due to the innacuracies of Arduino Floats these are not good constants to use.
+  // These coefficients are for the MF52AT NTC 10k thermistor, however due to thermistor tolerances each thermistor should be calibrated individually.
+  const float A = 0.001871300068;
+  const float B = 0.00009436080271;
+  const float C = 0.0000007954800125; //NOTE: due to the innacuracies of Arduino Floats these are not good constants to use.
 
   // Value of resistor forming potential divider with Thermistor in ohms.
   const int FIXED_RESISTOR_VALUE = 10000; //10k
@@ -653,11 +627,11 @@ float thermistorADCToCelcius(int rawADC)
   // The formula is: Temperature in Kelvin = 1 / {A + B[ln(R)] + C[ln(R)]^3} where A, B and C are the coefficients above and R is the resistance across the thermistor.
 
   // First step is to calculate the resistance of the thermistor using the potential divider equation V_out = (R1 + R2)/(R1 * R2)*V_in
-  // As R2 is the only unknown variable we can re-write this as: R2 = R1((V_in/V_out)-1).
+  // As R2 is the only unknown variable we can re-write this as: R2 = R1((V_in/V_out)-1).  R2 = (R1 V2)/(V1-V2)
   // As the ADC values are our readings of the voltage, we can substitute V_in with 1024 and V_out with the reading taken from the ADC, which is passed into this function as rawADC
   // This makes the calculation:
 
-  float thermistorResistance = FIXED_RESISTOR_VALUE * ((1024.0 / rawADC) - 1);
+  float thermistorResistance = ((float)FIXED_RESISTOR_VALUE * (float)rawADC)/ (float)((float)1023 - (float)rawADC);
 
   // Next, you'll notice that the log natural (ln) of this resistance needs to be calculated 4 times in the Steinhart-Hart equation. This is a complex and long calculation for the arduino.
   // As such it is efficient to do it once and save the result for use later:
@@ -668,13 +642,25 @@ float thermistorADCToCelcius(int rawADC)
 
   double temperature = 1 / (A + (B * lnResistance) + (C * lnResistance * lnResistance * lnResistance));
 
+
+
   // We now have the temperature in Kelvin. To convert it into Celcius we need to subtract 273.15
 
   temperature = temperature - 273.15;
 
+  if (DEBUG_MODE)
+  {
+    Serial.print("\n\rThemistore Resistance = ");
+    Serial.println(thermistorResistance);
+    Serial.print("Temperature = ");
+    Serial.println(temperature);
+  }
+
+  
+
   // Now return the Celcius Value:
 
-  return(temperature);
+  return (temperature);
 
 }
 
@@ -696,7 +682,7 @@ float thermistorADCToCelcius(int rawADC)
 
 void sendData(char identifier, float value)
 {
-  if(!DEBUG_MODE) // Only runs if debug mode is LOW (0)
+  if (!DEBUG_MODE) // Only runs if debug mode is LOW (0)
   {
     byte dataByte1;
     byte dataByte2;
@@ -775,7 +761,7 @@ void sendData(char identifier, float value)
 /** override for integer values*/
 void sendData(char identifier, int value)
 {
-  if(!DEBUG_MODE)
+  if (!DEBUG_MODE)
   {
     byte dataByte1;
     byte dataByte2;
@@ -961,30 +947,30 @@ void configureBluetooth()
 
   //Set Password_____________________________________________ Not working - leaving for now
 
-//  flushSerial();
-//  Serial.print("AT+PSWD="); //command to change Password
-//  //  Serial.println(BT_PASSWORD);
-//  Serial.println("1234");
-//  //  Serial.print("\r\n");
-//
-//  waitForSerial(500);
-//
-//  tempOne = (char)Serial.read();
-//
-//  waitForSerial(500);
-//
-//  tempTwo = (char)Serial.read();
-//
-//
-//  if (tempOne == 'O' && tempTwo == 'K') //Was the response "OK"?
-//  {
-//    Serial.println("Password Set");
-//    btPasswordSet = 1;
-//  }
-//  else
-//  {
-//    Serial.println("Password Not Set");
-//  }
+  //  flushSerial();
+  //  Serial.print("AT+PSWD="); //command to change Password
+  //  //  Serial.println(BT_PASSWORD);
+  //  Serial.println("1234");
+  //  //  Serial.print("\r\n");
+  //
+  //  waitForSerial(500);
+  //
+  //  tempOne = (char)Serial.read();
+  //
+  //  waitForSerial(500);
+  //
+  //  tempTwo = (char)Serial.read();
+  //
+  //
+  //  if (tempOne == 'O' && tempTwo == 'K') //Was the response "OK"?
+  //  {
+  //    Serial.println("Password Set");
+  //    btPasswordSet = 1;
+  //  }
+  //  else
+  //  {
+  //    Serial.println("Password Not Set");
+  //  }
 
 
   // Check all operations completed successfully
@@ -1003,7 +989,6 @@ void configureBluetooth()
     digitalWrite(13, HIGH);
     delay(200);
     digitalWrite(13, LOW);
-    
     delay(200);
     digitalWrite(13, HIGH);
     delay(200);
@@ -1067,8 +1052,3 @@ void fanSpeedISR()
 {
   fanPoll++;
 }
-
-
-
-
-
