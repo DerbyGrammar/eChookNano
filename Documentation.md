@@ -1,4 +1,8 @@
 #Documentation
+###Ratios
+The eChookNano Code requires some ratios: here they are
+`24V : 5.71`
+`12V : 2.602`
 ###Variable Names
 All of these are custom, so don't go complaining to the weChookTeam. Complain to Chris N  
   
