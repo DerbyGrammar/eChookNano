@@ -405,7 +405,7 @@ float readVoltageTotal()
 
   tempVoltage = (tempVoltage / 1024) * REFERENCE_VOLTAGE; //This gives the actual voltage seen at the arduino pin, assuming reference voltage of 5v
 
-  tempVoltage = tempVoltage * 6.15; //Gives battery voltage where 6 is the division ratio of the potential divider. NEEDS TUNING!!
+  tempVoltage = tempVoltage * TOTAL_RATIO; //Gives battery voltage where 6 is the division ratio of the potential divider. NEEDS TUNING!!
 
   return (tempVoltage);
 }
@@ -416,7 +416,7 @@ float readVoltageLower()
 
   tempVoltage = (tempVoltage / 1024) * REFERENCE_VOLTAGE; //This gives the actual voltage seen at the arduino pin, assuming reference voltage of 5v
 
-  tempVoltage = tempVoltage * 3.071f; //Gives battery voltage where 3 is the division ratio of the potential divider. NEEDS TUNING!!
+  tempVoltage = tempVoltage * LOWER_RATIO; //Gives battery voltage where 3 is the division ratio of the potential divider. NEEDS TUNING!!
 
   return (tempVoltage);
 }
