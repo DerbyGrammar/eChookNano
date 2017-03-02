@@ -353,7 +353,8 @@ float readVoltageTotal()
 
   tempVoltage = (tempVoltage / 1024) * REFERENCE_VOLTAGE; //This gives the actual voltage seen at the arduino pin, assuming reference voltage of 5v
 
-  tempVoltage = tempVoltage * 6.15; //Gives battery voltage where 6 is the division ratio of the potential divider. NEEDS TUNING!!
+  tempVoltage = tempVoltage * 5.71;
+	//Gives battery voltage where 6 is the division ratio of the potential divider. NEEDS TUNING!!
 
   return (tempVoltage);
 }
@@ -364,7 +365,7 @@ float readVoltageLower()
 
   tempVoltage = (tempVoltage / 1024) * REFERENCE_VOLTAGE; //This gives the actual voltage seen at the arduino pin, assuming reference voltage of 5v
 
-  tempVoltage = tempVoltage * 3.071f; //Gives battery voltage where 3 is the division ratio of the potential divider. NEEDS TUNING!!
+  tempVoltage = tempVoltage * 2.602f; //Gives battery voltage where 3 is the division ratio of the potential divider. NEEDS TUNING!!
 
   return (tempVoltage);
 }
@@ -397,7 +398,8 @@ float readCurrent()
     tempCurrent += currentSmoothingArray[i]; //sum all values in the current smoothing array
   }
 
-  tempCurrent = tempCurrent / currentSmoothingSetting; //divide summed value by number of samples to get mean
+
+tempCurrent = tempCurrent / currentSmoothingSetting; //divide summed value by number of samples to get mean
 
   return (tempCurrent); //return the final smoothed value
 }
