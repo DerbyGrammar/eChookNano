@@ -71,6 +71,8 @@ const int DEBUG_MODE = 0; //if debug mode is on, no data will be sent via blueto
 /** BOARD CALIBRATION                  */
 /** ================================== */
 const float REFERENCE_VOLTAGE = 5; //This is the analog reference voltage, i.e. the voltage from the DCDC that the board is actually running at
+const float TOTAL_RATIO = 5.71;
+const float LOWER_RATIO = 2.602;
 
 /** ================================== */
 /** CONSTANTS                          */
